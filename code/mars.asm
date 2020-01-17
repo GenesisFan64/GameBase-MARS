@@ -410,41 +410,22 @@ m_irq_v:
 m_irq_vres:
 		mov.l	#_sysreg,r0
 		ldc	r0,gbr
-		mov.w	r0,@(vresintclr,gbr)
+		mov.w	r0,@(vresintclr,gbr)	; V interrupt clear
 		mov.b	@(dreqctl,gbr),r0
 		tst	#1,r0
 		bf	.mars_reset
-.wait_md:
-		mov.l	#"68UP",r1		; Wait 68k
-		mov.l	@(comm12,gbr),r0
-		cmp/eq	r0,r1
-		bf	.wait_md
-.wait_slve:
-		mov.l	#"S_OK",r1		; Wait slave
-		mov.l	@(comm4,gbr),r0
-		cmp/eq	r0,r1
-		bf	.wait_slve
-		mov.l	#"M_OK",r0		; let the others know master ready
-		mov.l	r0,@(comm0,gbr)
-
 		mov.l	#CS3|$40000-8,r15
 		mov.l	#SH2_M_HotStart,r0
 		mov	r0,@r15
 		mov.w	#$F0,r0
 		mov	r0,@(4,r15)
-
 		mov.l	#_DMAOPERATION,r1
 		mov	#0,r0
 		mov.l	r0,@r1			; DMA off
-		mov.l	#_DMACHANNEL0,r1
-		mov	#0,r0
-		mov.l	r0,@r1
-		mov.l	#%0100010011100000,r1
-		mov.l	r0,@r1			; Channel control
 		rte
 		nop
 .mars_reset:
-		mov.l	#_FRT,r1		; System Reset
+		mov.l	#_FRT,r1
 		mov.b	@(_TOCR,r1),r0
 		or	#$01,r0
 		mov.b	r0,@(_TOCR,r1)
@@ -621,36 +602,16 @@ s_irq_vres:
 		mov.b	@(dreqctl,gbr),r0
 		tst	#1,r0
 		bf	.vresloop
-.wait_md:
-		mov.l	#"68UP",r1		; Wait 68k
-		mov.l	@(comm12,gbr),r0
-		cmp/eq	r0,r1
-		bf	.wait_md
-		mov.l	#'S_OK',r0		; tell the others slave is ready
-		mov.l	r0,@(comm4,gbr)
-.wait_master:
-		mov.l	#'M_OK',r1		; wait for master to show up
-		mov.l	@(comm0,gbr),r0
-		cmp/eq	r0,r1
-		bf	.wait_master
-
 		mov.l	#CS3|$3F000-8,r15
 		mov.l	#SH2_S_HotStart,r0
 		mov	r0,@r15
 		mov.w	#$F0,r0
 		mov	r0,@(4,r15)
-
 		mov.l	#_DMAOPERATION,r1
 		mov	#0,r0
-		mov.l	r0,@r1			; DMA off
-		mov.l	#_DMACHANNEL0,r1
-		mov	#0,r0
-		mov.l	r0,@r1
-		mov.l	#%0100010011100000,r1
-		mov.l	r0,@r1			; Channel control
+		mov.l	r0,@r1		; DMA off
 		rte
 		nop
-
 .vresloop:
 		bra	.vresloop
 		nop
@@ -671,21 +632,21 @@ SH2_Error:
 
 ; ====================================================================
 ; ----------------------------------------------------------------
+; MARS System features
+; ----------------------------------------------------------------
+
+		include "system/mars/video.asm"
+		include "system/mars/sound.asm"
+		align 4
+
+; ====================================================================
+; ----------------------------------------------------------------
 ; Master entry
 ; ----------------------------------------------------------------
 
 SH2_M_Entry:
 		mov.l	#_sysreg,r14
 		ldc	r14,gbr
-
-		mov.w	r0,@(vintclr,gbr)
-		mov.w	r0,@(vintclr,gbr)
-		mov.w	r0,@(hintclr,gbr)	; clear IRQ ACK regs
-		mov.w	r0,@(hintclr,gbr)
-		mov.w	r0,@(cmdintclr,gbr)
-		mov.w	r0,@(cmdintclr,gbr)
-		mov.w	r0,@(pwmintclr,gbr)
-		mov.w	r0,@(pwmintclr,gbr)
 		
 		mov.l	#_FRT,r1		; Set Free Run Timer
 		mov	#$00,r0
@@ -703,7 +664,7 @@ SH2_M_Entry:
 		mov	#$00,r0
 		mov.b	r0,@(_FRC_L,r1)		;
 		mov.b	r0,@(_FRC_H,r1)		;
-		mov	#$f2,r0			; reset setup
+		mov	#$F2,r0			; reset setup
 		mov.b	r0,@(_TOCR,r1)		;
 		mov	#$00,r0
 		mov.b	r0,@(_OCR_H,r1)		;
@@ -711,6 +672,8 @@ SH2_M_Entry:
 		mov.b	r0,@(_OCR_L,r1)		;
 		mov	#$E2,r0
 		mov.b	r0,@(_TOCR,r1)		;
+		mov	#$00,r0
+		mov.b	r0,@(intmask,gbr)	; Interrupt Mask
 		
 ; ---------------------------------------------
 ; Wait for MD and Slave SH2
@@ -728,23 +691,26 @@ SH2_M_Entry:
 		mov	#0,r0			; clear SLAV
 		mov.l	r0,@(comm8,gbr)
 
-; --------------------------------------------------------
-; Init
-; --------------------------------------------------------
+; ********************************************************
+; Your MASTER code starts here
+; ********************************************************
 
 SH2_M_HotStart:
-		mov	#$F0,r0			; Interrupts OFF
+		mov	#$F0,r0				; Interrupts OFF
 		ldc	r0,sr
-		mov	#_CCR,r1
+		mov	#_CCR,r1			; Set this cache mode
 		mov	#$19,r0
 		mov.w	r0,@r1
-		mov	#VIRQ_ON|CMDIRQ_ON,r0
+		mov	#PWMIRQ_ON|VIRQ_ON|CMDIRQ_ON,r0	; IRQ enable bits
     		mov.b	r0,@(intmask,gbr)
-		bsr	MarsVideo_Init
+
+; ------------------------------------------------
+
+		bsr	MarsVideo_Init			; Init video
 		nop
-		bsr	MarsSound_Init
+		bsr	MarsSound_Init			; Init sound
 		nop
-; 		mov 	#CACHE_DATA,r1
+; 		mov 	#CACHE_DATA,r1		
 ; 		mov 	#$C0000000,r2
 ; 		mov 	#(CACHE_END-CACHE_START)/4,r3
 ; .copy:
@@ -796,7 +762,8 @@ SH2_S_Entry:
 		mov	#$00,r0
 		mov.b	r0,@(_FRC_L,r1)		;
 		mov.b	r0,@(_FRC_H,r1)		;
-
+    		mov.b	r0,@(intmask,gbr)
+    		
 ; --------------------------------------------------------
 ; Wait for MD, report to Master SH2
 ; --------------------------------------------------------
@@ -808,23 +775,23 @@ SH2_S_Entry:
 		mov.l	#"SLAV",r0
 		mov.l	r0,@(comm8,gbr)
 
-; --------------------------------------------------------
-; Init
-; --------------------------------------------------------
+; ********************************************************
+; Your SLAVE code starts here
+; ********************************************************
 
 SH2_S_HotStart:
 		mov	#$F0,r0			; Interrupts OFF
 		ldc	r0,sr
-		mov	#_CCR,r1
+		mov	#_CCR,r1		; Set this cache mode
 		mov	#$19,r0
 		mov.w	r0,@r1
-		mov	#CMDIRQ_ON,r0
-    		mov.b	r0,@(intmask,gbr)
+		mov	#CMDIRQ_ON,r0		; IRQ enable bits
+    		mov.b	r0,@(intmask,gbr)	; clear IRQ ACK regs
 		mov.w	r0,@(pwmintclr,gbr)
 		mov.w	r0,@(pwmintclr,gbr)
 		mov.w	r0,@(vintclr,gbr)
 		mov.w	r0,@(vintclr,gbr)
-		mov.w	r0,@(hintclr,gbr)	;clear IRQ ACK regs
+		mov.w	r0,@(hintclr,gbr)
 		mov.w	r0,@(hintclr,gbr)
 		mov.w	r0,@(cmdintclr,gbr)
 		mov.w	r0,@(cmdintclr,gbr)
@@ -835,7 +802,7 @@ SH2_S_HotStart:
 		ldc	r0,sr
 
 ; --------------------------------------------------------
-; Loopf
+; Loop
 ; --------------------------------------------------------
 
 slave_loop:
@@ -850,19 +817,10 @@ slave_loop:
 
 ; ====================================================================
 ; ----------------------------------------------------------------
-; MARS System features
-; ----------------------------------------------------------------
-
-		include "system/mars/video.asm"
-		include "system/mars/sound.asm"
-		align 4
-
-; ====================================================================
-; ----------------------------------------------------------------
 ; MARS DATA
 ; ----------------------------------------------------------------
 
-sin_table	binclude "system/mars/data/sinedata.bin"
+sin_table	binclude "system/mars/data/sinedata.bin"	; sinetable for 3D stuff
 		align 4
 
 		include "data/mars_sdram.asm"

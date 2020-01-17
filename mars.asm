@@ -9,7 +9,6 @@
 		include	"system/const.asm"	; RAM / Variables are here
 		include	"system/md/map.asm"	; Genesis hardware map
 		include	"system/mars/map.asm"	; MARS map
-
 		
 ; ====================================================================
 ; ----------------------------------------------------------------

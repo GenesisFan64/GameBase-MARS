@@ -88,14 +88,72 @@
 
 ; ====================================================================
 ; ----------------------------------------------------------------
-; MARS Extra header
+; MARS New jumps
 ; ----------------------------------------------------------------
 
-		jmp	(MARS_Entry).l
-		align $2A2
-		jmp	(RAM_HBlankGoTo).l
-		align $2AE
-		jmp	(RAM_VBlankGoTo).l
+		jmp	($880000|MARS_Entry).l
+		jmp	($880000|MD_ErrBus).l			; Bus error
+		jmp	($880000|MD_ErrAddr).l			; Address error
+		jmp	($880000|MD_ErrIll).l			; ILLEGAL Instruction
+		jmp	($880000|MD_ErrZDiv).l			; Divide by 0
+		jmp	($880000|MD_ErrChk).l			; CHK Instruction
+		jmp	($880000|MD_ErrTrapV).l			; TRAPV Instruction
+		jmp	($880000|MD_ErrPrivl).l			; Privilege violation
+		jmp	($880000|MD_Trace).l			; Trace
+		jmp	($880000|MD_Line1010).l			; Line 1010 Emulator
+		jmp	($880000|MD_Line1111).l			; Line 1111 Emulator
+		jmp	($880000|MD_ErrorEx).l			; Error exception
+		jmp	($880000|MD_ErrorEx).l
+		jmp	($880000|MD_ErrorEx).l
+		jmp	($880000|MD_ErrorEx).l
+		jmp	($880000|MD_ErrorEx).l	
+		jmp	($880000|MD_ErrorEx).l
+		jmp	($880000|MD_ErrorEx).l
+		jmp	($880000|MD_ErrorEx).l
+		jmp	($880000|MD_ErrorEx).l
+		jmp	($880000|MD_ErrorEx).l
+		jmp	($880000|MD_ErrorEx).l
+		jmp	($880000|MD_ErrorEx).l
+		jmp	($880000|MD_ErrorEx).l		
+		jmp	($880000|MD_ErrorTrap).l
+		jmp	($880000|MD_ErrorTrap).l
+		jmp	($880000|MD_ErrorTrap).l
+		jmp	(RAM_HBlankGoTo).l			; VDP HBlank interrupt
+		jmp	($880000|MD_ErrorTrap).l
+		jmp	(RAM_VBlankGoTo).l		; VDP VBlank interrupt
+		jmp	($880000|MD_ErrorTrap).l
+		jmp	($880000|MD_ErrorTrap).l
+		jmp	($880000|MD_ErrorTrap).l
+		jmp	($880000|MD_ErrorTrap).l
+		jmp	($880000|MD_ErrorTrap).l
+		jmp	($880000|MD_ErrorTrap).l
+		jmp	($880000|MD_ErrorTrap).l
+		jmp	($880000|MD_ErrorTrap).l
+		jmp	($880000|MD_ErrorTrap).l
+		jmp	($880000|MD_ErrorTrap).l
+		jmp	($880000|MD_ErrorTrap).l
+		jmp	($880000|MD_ErrorTrap).l
+		jmp	($880000|MD_ErrorTrap).l
+		jmp	($880000|MD_ErrorTrap).l
+		jmp	($880000|MD_ErrorTrap).l
+		jmp	($880000|MD_ErrorTrap).l
+		jmp	($880000|MD_ErrorTrap).l
+		jmp	($880000|MD_ErrorTrap).l
+		jmp	($880000|MD_ErrorTrap).l
+		jmp	($880000|MD_ErrorTrap).l
+		jmp	($880000|MD_ErrorTrap).l
+		jmp	($880000|MD_ErrorTrap).l
+		jmp	($880000|MD_ErrorTrap).l
+		jmp	($880000|MD_ErrorTrap).l
+		jmp	($880000|MD_ErrorTrap).l
+		jmp	($880000|MD_ErrorTrap).l
+		jmp	($880000|MD_ErrorTrap).l
+		jmp	($880000|MD_ErrorTrap).l
+		jmp	($880000|MD_ErrorTrap).l
+		jmp	($880000|MD_ErrorTrap).l
+		jmp	($880000|MD_ErrorTrap).l
+		jmp	($880000|MD_ErrorTrap).l
+		jmp	($880000|MD_ErrorTrap).l
 
 ; ----------------------------------------------------------------
 
@@ -162,7 +220,6 @@ MARS_Entry:
 
 .init:
 		lea	(sysmars_reg).l,a5
-		move.l	#'68UP',comm12(a5)	; tell the others 68k is ready
 .wm:		cmp.l	#'M_OK',comm0(a5)	; SH2 Master OK ?
 		bne.s	.wm
 .ws:		cmp.l	#'S_OK',comm4(a5)	; SH2 Slave OK ?
@@ -170,12 +227,11 @@ MARS_Entry:
 		moveq	#0,d0			; SH2 Start
 		move.l	d0,comm0(a5)		; Master
 		move.l	d0,comm4(a5)		; Slave
-		move.l	d0,comm12(a5)
+		bsr	MD_Init
 		move.l	#"INIT",(RAM_initflug).l
 .hotstart:
 		cmp.l	#"INIT",(RAM_initflug).l
 		bne.s	.init
-		bsr	MD_Init
 		lea	Engine_Code(pc),a0
 		lea	($FF0000),a1
 		move.w	#Engine_Code_end-Engine_Code/2,d0
