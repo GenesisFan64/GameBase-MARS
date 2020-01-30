@@ -219,26 +219,29 @@ MARS_Entry:
 ; ------------------------------------------------
 
 .init:
+		move.w	#$2700,sr
 		lea	(sysmars_reg).l,a5
-.wm:		cmp.l	#'M_OK',comm0(a5)	; SH2 Master OK ?
+		move.l	#"68UP",comm12(a5)
+.wm:		cmp.l	#"M_OK",comm0(a5)	; SH2 Master OK ?
 		bne.s	.wm
-.ws:		cmp.l	#'S_OK',comm4(a5)	; SH2 Slave OK ?
+.ws:		cmp.l	#"S_OK",comm4(a5)	; SH2 Slave OK ?
 		bne.s	.ws
-		moveq	#0,d0			; SH2 Start
-		move.l	d0,comm0(a5)		; Master
-		move.l	d0,comm4(a5)		; Slave
-		bsr	MD_Init
+		moveq	#0,d0
+		move.l	d0,comm0(a5)
+		move.l	d0,comm4(a5)
+		move.l	d0,comm12(a5)
 		move.l	#"INIT",(RAM_initflug).l
 .hotstart:
 		cmp.l	#"INIT",(RAM_initflug).l
 		bne.s	.init
+		bsr	MD_Init
 		lea	Engine_Code(pc),a0
 		lea	($FF0000),a1
 		move.w	#Engine_Code_end-Engine_Code/2,d0
 .copyme:
 		move.w	(a0)+,(a1)+
 		dbf	d0,.copyme
-		jmp	(MD_Main).l
+		jmp	(MD_Main).l			; $FF0000 + MD_Main
 
 ; ====================================================================
 ; ----------------------------------------------------------------

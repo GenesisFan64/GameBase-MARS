@@ -84,4 +84,4 @@ MARS_RAMDATA_E:
 ; ---------------------------------------------
 		
 ROM_END:
-		rompad (ROM_END&$FF0000)+$80000
+		rompad (ROM_END&$FF0000)+$40000

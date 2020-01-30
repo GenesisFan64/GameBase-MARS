@@ -173,17 +173,24 @@ m_irq_bad:
 ; ------------------------------------------------
 
 m_irq_pwm:
-		mov	#$F0,r0
-		ldc	r0,sr
-		mov.l	#_FRT,r1
-		mov.b	@(_TOCR,r1),r0
-		xor	#$02,r0
-		mov.b	r0,@(_TOCR,r1)
-		mov.w	r0,@(pwmintclr,gbr)
-		nop
-		nop
-		nop
-		nop
+		mov	#$02,r0			; toggle FRT bit for future IRQs
+		mov.w	r0,@(pwmintclr,gbr)	; interrupt clear
+		mov	#_FRT,r1
+		mov.b	r0,@(_TOCR,r1)		; as required
+		mov.w	@(pwmintclr,gbr),r0	; interrupt clear
+		mov.b	@(_TOCR,r1),r0		; as required
+	
+; 		mov	#$F0,r0
+; 		ldc	r0,sr
+; 		mov.l	#_FRT,r1
+; 		mov.b	@(_TOCR,r1),r0
+; 		xor	#$02,r0
+; 		mov.b	r0,@(_TOCR,r1)
+; 		mov.w	r0,@(pwmintclr,gbr)
+; 		nop
+; 		nop
+; 		nop
+; 		nop
 		
 ; ----------------------------------
 
@@ -223,17 +230,24 @@ m_irq_pwm:
 ; ------------------------------------------------
 
 m_irq_cmd:
-		mov	#$F0,r0
-		ldc	r0,sr
-		mov.l	#_FRT,r1
-		mov.b	@(_TOCR,r1),r0
-		xor	#$02,r0
-		mov.b	r0,@(_TOCR,r1)
-		mov.w	r0,@(cmdintclr,gbr)
-		nop
-		nop
-		nop
-		nop
+		mov	#$02,r0			; toggle FRT bit for future IRQs
+		mov.w	r0,@(cmdintclr,gbr)	; interrupt clear
+		mov	#_FRT,r1
+		mov.b	r0,@(_TOCR,r1)		; as required
+		mov.w	@(cmdintclr,gbr),r0	; interrupt clear
+		mov.b	@(_TOCR,r1),r0		; as required
+		
+; 		mov	#$F0,r0
+; 		ldc	r0,sr
+; 		mov.l	#_FRT,r1
+; 		mov.b	@(_TOCR,r1),r0
+; 		xor	#$02,r0
+; 		mov.b	r0,@(_TOCR,r1)
+; 		mov.w	r0,@(cmdintclr,gbr)
+; 		nop
+; 		nop
+; 		nop
+; 		nop
 		
 ; ----------------------------------
 
@@ -291,17 +305,24 @@ m_irq_cmd:
 ; ------------------------------------------------
 
 m_irq_h:
-		mov	#$F0,r0
-		ldc	r0,sr
-		mov.l	#_FRT,r1
-		mov.b	@(_TOCR,r1),r0
-		xor	#$02,r0
-		mov.b	r0,@(_TOCR,r1)
-		mov.w	r0,@(hintclr,gbr)
-		nop
-		nop
-		nop
-		nop
+		mov	#$02,r0			; toggle FRT bit for future IRQs
+		mov.w	r0,@(hintclr,gbr)	; interrupt clear
+		mov	#_FRT,r1
+		mov.b	r0,@(_TOCR,r1)		; as required
+		mov.w	@(hintclr,gbr),r0	; interrupt clear
+		mov.b	@(_TOCR,r1),r0		; as required
+		
+; 		mov	#$F0,r0
+; 		ldc	r0,sr
+; 		mov.l	#_FRT,r1
+; 		mov.b	@(_TOCR,r1),r0
+; 		xor	#$02,r0
+; 		mov.b	r0,@(_TOCR,r1)
+; 		mov.w	r0,@(hintclr,gbr)
+; 		nop
+; 		nop
+; 		nop
+; 		nop
 		
 ; ----------------------------------
 
@@ -318,50 +339,57 @@ m_irq_h:
 m_irq_v:
 		mov	#$F0,r0
 		ldc	r0,sr
-		mov.l	#_FRT,r1
-		mov.b	@(_TOCR,r1),r0
-		xor	#$02,r0
-		mov.b	r0,@(_TOCR,r1)
-		mov.w	r0,@(vintclr,gbr)
-		nop
-		nop
-		nop
-		nop
+		mov	#$02,r0			; toggle FRT bit for future IRQs
+		mov.w	r0,@(vintclr,gbr)	; interrupt clear
+		mov	#_FRT,r1
+		mov.b	r0,@(_TOCR,r1)		; as required
+		mov.w	@(vintclr,gbr),r0	; interrupt clear
+		mov.b	@(_TOCR,r1),r0		; as required
+
+; 		mov	#$F0,r0
+; 		ldc	r0,sr
+; 		mov.l	#_FRT,r1
+; 		mov.b	@(_TOCR,r1),r0
+; 		xor	#$02,r0
+; 		mov.b	r0,@(_TOCR,r1)
+; 		mov.w	r0,@(vintclr,gbr)
+; 		nop
+; 		nop
+; 		nop
+; 		nop
 		
 ; ----------------------------------
 
-; 		mov 	#_vdpreg,r1
-; .min_r		mov.w	@(10,r1),r0		; Wait for FEN to clear
-; 		and	#%10,r0
-; 		cmp/eq	#2,r0
-; 		bt	.min_r
-; 	
-; ; 	send palette from cache to vdp palette
-; 		mov	r2,@-r15
-; 		mov	r3,@-r15
-; 		mov	r4,@-r15
-; 		mov	r5,@-r15
-; 		mov	r6,@-r15
-; 		mov.l	#_vdpreg,r1		; Wait for palette access ok
-; .wait		mov.b	@(vdpsts,r1),r0
-; 		tst	#$20,r0
-; 		bt	.wait
-; 		mov	#MARSVid_Palette,r1	; Send palette from cache
-; 		mov	#_palette,r2
-;  		mov	#256,r3
-; 		mov	#%0101011011110001,r4	; transfer size 2 / burst
-; 		mov	#_DMASOURCE0,r5 	; _DMASOURCE = $ffffff80
-; 		mov	#_DMAOPERATION,r6 	; _DMAOPERATION = $ffffffb0
-; 		mov	r1,@r5			; set source address
-; 		mov	r2,@(4,r5)		; set destination address
-; 		mov	r3,@(8,r5)		; set length
-; 		xor	r0,r0
-; 		mov	r0,@r6			; Stop OPERATION
-; 		xor	r0,r0
-; 		mov	r0,@($C,r5)		; clear TE bit
-; 		mov	r4,@($C,r5)		; load mode
-; 		add	#1,r0
-; 		mov	r0,@r6			; Start OPERATION
+		mov 	#_vdpreg,r1
+.min_r		mov.w	@(10,r1),r0		; Wait for FEN to clear
+		and	#%10,r0
+		cmp/eq	#2,r0
+		bt	.min_r
+		mov	r2,@-r15		; Send palette from ROM to Super VDP
+		mov	r3,@-r15
+		mov	r4,@-r15
+		mov	r5,@-r15
+		mov	r6,@-r15
+		mov.l	#_vdpreg,r1		; Wait for palette access ok
+.wait		mov.b	@(vdpsts,r1),r0
+		tst	#$20,r0
+		bt	.wait
+		mov	#MARSVid_Palette,r1	; Send palette from cache
+		mov	#_palette,r2
+ 		mov	#256,r3
+		mov	#%0101011011110001,r4	; transfer size 2 / burst
+		mov	#_DMASOURCE0,r5 	; _DMASOURCE = $ffffff80
+		mov	#_DMAOPERATION,r6 	; _DMAOPERATION = $ffffffb0
+		mov	r1,@r5			; set source address
+		mov	r2,@(4,r5)		; set destination address
+		mov	r3,@(8,r5)		; set length
+		xor	r0,r0
+		mov	r0,@r6			; Stop OPERATION
+		xor	r0,r0
+		mov	r0,@($C,r5)		; clear TE bit
+		mov	r4,@($C,r5)		; load mode
+		add	#1,r0
+		mov	r0,@r6			; Start OPERATION
 ; 
 ; 	; Grab inputs from MD (using COMM12 and COMM14)
 ; 	; using MD's VBlank
@@ -385,12 +413,11 @@ m_irq_v:
 ; 		and	r0,r1
 ; 		mov	r1,@(4,r3)
 ; 
-; 		mov	@r15+,r6
-; 		mov	@r15+,r5
-; 		mov	@r15+,r4
-; 		mov	@r15+,r3
-; 		mov	@r15+,r2
-
+		mov	@r15+,r6
+		mov	@r15+,r5
+		mov	@r15+,r4
+		mov	@r15+,r3
+		mov	@r15+,r2
 		mov 	#0,r0
 		mov	#MarsVid_VIntBit,r1
 		mov 	r0,@r1
@@ -414,14 +441,49 @@ m_irq_vres:
 		mov.b	@(dreqctl,gbr),r0
 		tst	#1,r0
 		bf	.mars_reset
-		mov.l	#CS3|$40000-8,r15
-		mov.l	#SH2_M_HotStart,r0
+.md_reset:
+		mov.l	#"68UP",r1		; wait for the 68k to show up
+		mov.l	@(comm12,gbr),r0
+		cmp/eq	r0,r1
+		bf	.md_reset
+.sh_wait:
+		mov.l	#"S_OK",r1		; wait for the slave to show up
+		mov.l	@(comm4,gbr),r0
+		cmp/eq	r0,r1
+		bf	.sh_wait
+
+; 		mov	#$220003D4,r1		; TODO: creo que ya no necesito esto
+; 		mov	@r1,r2
+; 		mov	@(4,r1),r3
+; 		mov	@(8,r1),r4
+; 		mov	#$22000000,r1
+; 		add	r1,r2
+; 		mov	#$26000000,r1
+; 		add	r1,r3
+; 		shlr2	r4
+; 		add	#-1,r4
+; .recopy_rom:
+; 		mov.l	@r2+,r0
+; 		mov.l	r0,@r3
+; 		add	#4,r3
+; 		dt	r4
+; 		bf	.recopy_rom
+
+		mov	#"M_OK",r0		; let the others know master ready
+		mov	r0,@(comm0,gbr)
+		mov	#CS3|$40000-8,r15
+		mov	#SH2_M_HotStart,r0
 		mov	r0,@r15
 		mov.w	#$F0,r0
 		mov	r0,@(4,r15)
-		mov.l	#_DMAOPERATION,r1
+		mov	#_DMAOPERATION,r1
 		mov	#0,r0
-		mov.l	r0,@r1			; DMA off
+		mov	r0,@r1			; DMA off
+		mov	#_DMACHANNEL0,r1
+		mov	#0,r0
+		mov	r0,@r1
+		mov	#%0100010011100000,r1
+		mov	r0,@r1			; Channel control
 		rte
 		nop
 .mars_reset:
@@ -495,17 +557,24 @@ s_irq_bad:
 ; ------------------------------------------------
 
 s_irq_pwm:
-		mov	#$F0,r0
-		ldc	r0,sr
-		mov.l	#_FRT,r1
-		mov.b	@(_TOCR,r1),r0
-		xor	#$02,r0
-		mov.b	r0,@(_TOCR,r1)
-		mov.w	r0,@(pwmintclr,gbr)
-		nop
-		nop
-		nop
-		nop
+		mov	#$02,r0			; toggle FRT bit for future IRQs
+		mov.w	r0,@(pwmintclr,gbr)	; interrupt clear
+		mov	#_FRT,r1
+		mov.b	r0,@(_TOCR,r1)		; as required
+		mov.w	@(pwmintclr,gbr),r0	; interrupt clear
+		mov.b	@(_TOCR,r1),r0		; as required
+		
+; 		mov	#$F0,r0
+; 		ldc	r0,sr
+; 		mov.l	#_FRT,r1
+; 		mov.b	@(_TOCR,r1),r0
+; 		xor	#$02,r0
+; 		mov.b	r0,@(_TOCR,r1)
+; 		mov.w	r0,@(pwmintclr,gbr)
+; 		nop
+; 		nop
+; 		nop
+; 		nop
 		
 ; ----------------------------------
 
@@ -520,17 +589,24 @@ s_irq_pwm:
 ; ------------------------------------------------
 
 s_irq_cmd:
-		mov	#$F0,r0
-		ldc	r0,sr
-		mov.l	#_FRT,r1
-		mov.b	@(_TOCR,r1),r0
-		xor	#$02,r0
-		mov.b	r0,@(_TOCR,r1)
-		mov.w	r0,@(cmdintclr,gbr)
-		nop
-		nop
-		nop
-		nop
+		mov	#$02,r0			; toggle FRT bit for future IRQs
+		mov.w	r0,@(cmdintclr,gbr)	; interrupt clear
+		mov	#_FRT,r1
+		mov.b	r0,@(_TOCR,r1)		; as required
+		mov.w	@(cmdintclr,gbr),r0	; interrupt clear
+		mov.b	@(_TOCR,r1),r0		; as required
+		
+; 		mov	#$F0,r0
+; 		ldc	r0,sr
+; 		mov.l	#_FRT,r1
+; 		mov.b	@(_TOCR,r1),r0
+; 		xor	#$02,r0
+; 		mov.b	r0,@(_TOCR,r1)
+; 		mov.w	r0,@(cmdintclr,gbr)
+; 		nop
+; 		nop
+; 		nop
+; 		nop
 		
 ; ----------------------------------
 
@@ -546,17 +622,24 @@ s_irq_cmd:
 ; ------------------------------------------------
 
 s_irq_h:
-		mov	#$F0,r0
-		ldc	r0,sr
-		mov.l	#_FRT,r1
-		mov.b	@(_TOCR,r1),r0
-		xor	#$02,r0
-		mov.b	r0,@(_TOCR,r1)
-		mov.w	r0,@(hintclr,gbr)
-		nop
-		nop
-		nop
-		nop
+		mov	#$02,r0			; toggle FRT bit for future IRQs
+		mov.w	r0,@(hintclr,gbr)	; interrupt clear
+		mov	#_FRT,r1
+		mov.b	r0,@(_TOCR,r1)		; as required
+		mov.w	@(hintclr,gbr),r0	; interrupt clear
+		mov.b	@(_TOCR,r1),r0		; as required
+		
+; 		mov	#$F0,r0
+; 		ldc	r0,sr
+; 		mov.l	#_FRT,r1
+; 		mov.b	@(_TOCR,r1),r0
+; 		xor	#$02,r0
+; 		mov.b	r0,@(_TOCR,r1)
+; 		mov.w	r0,@(hintclr,gbr)
+; 		nop
+; 		nop
+; 		nop
+; 		nop
 		
 ; ----------------------------------
 
@@ -571,17 +654,24 @@ s_irq_h:
 ; ------------------------------------------------
 
 s_irq_v:
-		mov	#$F0,r0
-		ldc	r0,sr
-		mov.l	#_FRT,r1
-		mov.b	@(_TOCR,r1),r0
-		xor	#$02,r0
-		mov.b	r0,@(_TOCR,r1)
-		mov.w	r0,@(vintclr,gbr)
-		nop
-		nop
-		nop
-		nop
+		mov	#$02,r0			; toggle FRT bit for future IRQs
+		mov.w	r0,@(vintclr,gbr)	; interrupt clear
+		mov	#_FRT,r1
+		mov.b	r0,@(_TOCR,r1)		; as required
+		mov.w	@(vintclr,gbr),r0	; interrupt clear
+		mov.b	@(_TOCR,r1),r0		; as required
+		
+; 		mov	#$F0,r0
+; 		ldc	r0,sr
+; 		mov.l	#_FRT,r1
+; 		mov.b	@(_TOCR,r1),r0
+; 		xor	#$02,r0
+; 		mov.b	r0,@(_TOCR,r1)
+; 		mov.w	r0,@(vintclr,gbr)
+; 		nop
+; 		nop
+; 		nop
+; 		nop
 
 ; ----------------------------------
 		
@@ -598,20 +688,43 @@ s_irq_v:
 s_irq_vres:
 		mov.l	#_sysreg,r0
 		ldc	r0,gbr
-		mov.w	r0,@(vresintclr,gbr)
+		mov.w	r0,@(vresintclr,gbr)	; V interrupt clear
 		mov.b	@(dreqctl,gbr),r0
 		tst	#1,r0
-		bf	.vresloop
-		mov.l	#CS3|$3F000-8,r15
-		mov.l	#SH2_S_HotStart,r0
+		bf	.mars_reset
+.md_reset:
+		mov.l	#"68UP",r1		; wait for the 68k to show up
+		mov.l	@(comm12,gbr),r0
+		cmp/eq	r0,r1
+		bf	.md_reset
+		mov	#"S_OK",r0		; tell the others slave is ready
+		mov	r0,@(comm4,gbr)
+.sh_wait:
+		mov.l	#"M_OK",r1		; wait for the slave to show up
+		mov.l	@(comm0,gbr),r0
+		cmp/eq	r0,r1
+		bf	.sh_wait
+
+		mov	#CS3|$3F000-8,r15
+		mov	#SH2_S_HotStart,r0
 		mov	r0,@r15
 		mov.w	#$F0,r0
 		mov	r0,@(4,r15)
-		mov.l	#_DMAOPERATION,r1
+		mov	#_DMAOPERATION,r1
 		mov	#0,r0
-		mov.l	r0,@r1		; DMA off
+		mov	r0,@r1			; DMA off
+		mov	#_DMACHANNEL0,r1
+		mov	#0,r0
+		mov	r0,@r1
+		mov	#%0100010011100000,r1
+		mov	r0,@r1			; Channel control
 		rte
 		nop
+.mars_reset:
+		mov.l	#_FRT,r1
+		mov.b	@(_TOCR,r1),r0
+		or	#$01,r0
+		mov.b	r0,@(_TOCR,r1)
 .vresloop:
 		bra	.vresloop
 		nop
@@ -645,9 +758,17 @@ SH2_Error:
 ; ----------------------------------------------------------------
 
 SH2_M_Entry:
-		mov.l	#_sysreg,r14
+		mov	#CS3|$40000,r15
+		mov	#_sysreg,r14
 		ldc	r14,gbr
-		
+		mov.w	r0,@(vintclr,gbr)
+		mov.w	r0,@(vintclr,gbr)
+		mov.w	r0,@(hintclr,gbr)	;clear IRQ ACK regs
+		mov.w	r0,@(hintclr,gbr)
+		mov.w	r0,@(cmdintclr,gbr)
+		mov.w	r0,@(cmdintclr,gbr)
+		mov.w	r0,@(pwmintclr,gbr)
+		mov.w	r0,@(pwmintclr,gbr)
 		mov.l	#_FRT,r1		; Set Free Run Timer
 		mov	#$00,r0
 		mov.b	r0,@(_TIER,r1)		;
@@ -670,10 +791,8 @@ SH2_M_Entry:
 		mov.b	r0,@(_OCR_H,r1)		;
 		mov	#$01,r0
 		mov.b	r0,@(_OCR_L,r1)		;
-		mov	#$E2,r0
+		mov	#$e2,r0
 		mov.b	r0,@(_TOCR,r1)		;
-		mov	#$00,r0
-		mov.b	r0,@(intmask,gbr)	; Interrupt Mask
 		
 ; ---------------------------------------------
 ; Wait for MD and Slave SH2
@@ -685,10 +804,10 @@ SH2_M_Entry:
 		bf	.wait_md
 		mov.l	#"SLAV",r1
 .wait_slave:
-		mov.l	@(comm8,gbr),r0		; wait for the slave to finish booting
+		mov.l	@(comm8,gbr),r0			; wait for the slave to finish booting
 		cmp/eq	r1,r0
 		bf	.wait_slave
-		mov	#0,r0			; clear SLAV
+		mov	#0,r0				; clear SLAV
 		mov.l	r0,@(comm8,gbr)
 
 ; ********************************************************
@@ -696,6 +815,10 @@ SH2_M_Entry:
 ; ********************************************************
 
 SH2_M_HotStart:
+		mov	#CS3|$40000,r15
+		mov	#_sysreg,r14
+		ldc	r14,gbr
+	
 		mov	#$F0,r0				; Interrupts OFF
 		ldc	r0,sr
 		mov	#_CCR,r1			; Set this cache mode
@@ -720,6 +843,9 @@ SH2_M_HotStart:
 ; 		dt	r3
 ; 		bf	.copy
 
+		mov	#0,r0
+		mov.w	r0,@(comm8,gbr)
+		
 ; ------------------------------------------------
 
 		mov	#$20,r0			; Interrupts ON
@@ -762,7 +888,6 @@ SH2_S_Entry:
 		mov	#$00,r0
 		mov.b	r0,@(_FRC_L,r1)		;
 		mov.b	r0,@(_FRC_H,r1)		;
-    		mov.b	r0,@(intmask,gbr)
     		
 ; --------------------------------------------------------
 ; Wait for MD, report to Master SH2
@@ -780,6 +905,9 @@ SH2_S_Entry:
 ; ********************************************************
 
 SH2_S_HotStart:
+		mov.l	#CS3|$3F000,r15
+		mov.l	#_sysreg,r14
+		ldc	r14,gbr			; GBR = addr of sys regs
 		mov	#$F0,r0			; Interrupts OFF
 		ldc	r0,sr
 		mov	#_CCR,r1		; Set this cache mode
