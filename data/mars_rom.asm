@@ -2,11 +2,10 @@
 ; ----------------------------------------------------------------
 ; SH2 ROM user data
 ; 
-; This section will be gone if perfoming DMA ROM-to-VDP on the
-; MD side
-; 
-; (setting RV=1)
+; If your data is too much for SDRAM, place it here.
+; Note that this section will be gone if the Genesis side is
+; perfoming a DMA ROM-to-VDP Transfer (setting RV=1)
 ; ----------------------------------------------------------------
 
-		dc.b "MARS DATA FROM ROM GOES HERE"
+		dc.b "MARS ROM DATA GOES HERE"
 		align 4

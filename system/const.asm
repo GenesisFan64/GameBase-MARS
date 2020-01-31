@@ -1,6 +1,6 @@
 ; ====================================================================
 ; ----------------------------------------------------------------
-; Engine settings
+; 68000 RAM and constants
 ; ----------------------------------------------------------------
 
 MDRAM_START	equ $FFFF8800	; Start of working RAM (below is free)
@@ -8,12 +8,11 @@ MAX_MDERAM	equ $800	; MAX RAM for Screen modes
 
 ; ====================================================================
 ; ----------------------------------------------------------------
-; Variables
+; VDP Video
 ; ----------------------------------------------------------------
 
-; --------------------------------------------------------
-; System
-; --------------------------------------------------------
+Vdp_palette	equ $C0000000		; Palette
+Vdp_vsram	equ $40000010		; Vertical scroll
 
 ; ------------------------------------------------
 ; vdp_ctrl READ bits
@@ -41,11 +40,16 @@ bitDispEnbl	equ 6
 bitVintEnbl	equ 5
 bitDmaEnbl	equ 4
 bitV30		equ 3
-	
+
+; ====================================================================
 ; --------------------------------------------------------
-; System section
+; Contoller reading (call System_Input first)
 ; --------------------------------------------------------
 
+Controller_1	equ RAM_InputData
+Controller_2	equ RAM_InputData+sizeof_input
+
+; full WORD
 JoyUp		equ $0001
 JoyDown		equ $0002
 JoyLeft		equ $0004
@@ -59,7 +63,7 @@ JoyY		equ $0200
 JoyX		equ $0400
 JoyMode		equ $0800
 
-; right byte only
+; right byte $00xx
 bitJoyUp	equ 0
 bitJoyDown	equ 1
 bitJoyLeft	equ 2
@@ -69,43 +73,20 @@ bitJoyC		equ 5
 bitJoyA		equ 6
 bitJoyStart	equ 7
 
-; left byte only
+; left byte $xx00
 bitJoyZ		equ 0
 bitJoyY		equ 1
 bitJoyX		equ 2
 bitJoyMode	equ 3
 
+; ====================================================================
+; --------------------------------------------------------
+; Others
 ; --------------------------------------------------------
 
-; Special:
-; MCD already jumps to RAM
-	if MCD
-RAM_VBlankGoTo	equ $FFFFFD06
-RAM_HBlankGoTo	equ $FFFFFD0C
-	else
 RAM_VBlankGoTo	equ RAM_MdMarsVInt
 RAM_HBlankGoTo	equ RAM_MdMarsHInt
-	endif
-
-; --------------------------------------------------------
-; Misc
-; --------------------------------------------------------
-
-; RAM_SysFlags
-bitMars		equ 0
-
-varNullVram	equ $7FF
-
-; ====================================================================
-; ----------------------------------------------------------------
-; Aliases
-; ----------------------------------------------------------------
-
-Controller_1	equ RAM_InputData
-Controller_2	equ RAM_InputData+sizeof_input
-
-Vdp_palette	equ $C0000000		; Palette
-Vdp_vsram	equ $40000010		; Vertical scroll
+varNullVram	equ $7FF		; Used in some Video routines
 
 ; ====================================================================
 ; ----------------------------------------------------------------
@@ -119,38 +100,6 @@ pad_ver		ds.b 1
 on_hold		ds.w 1
 on_press	ds.w 1
 sizeof_input	ds.l 0
-		finish
-
-; ====================================================================
-; ----------------------------------------------------------------
-; MD RAM
-;
-; NOTE:
-; MCD Uses $FFFD00-$FFFDFF, stack starts at $FFFD00
-; ----------------------------------------------------------------
-
-		struct MDRAM_START
-	if MOMPASS=1				; First pass, empty sizes
-RAM_ModeBuff	ds.l 0
-RAM_MdSystem	ds.l 0
-RAM_MdSound	ds.l 0
-RAM_MdVideo	ds.l 0
-RAM_ExRamSub	ds.l 0
-RAM_MdGlobal	ds.l 0
-sizeof_mdram	ds.l 0
-	else
-RAM_ModeBuff	ds.b MAX_MDERAM			; Second pass, sizes are set
-RAM_MdSystem	ds.b sizeof_mdsys-RAM_MdSystem
-RAM_MdSound	ds.b sizeof_mdsnd-RAM_MdSound
-RAM_MdVideo	ds.b sizeof_mdvid-RAM_MdVideo
-RAM_ExRamSub	ds.w $500			; ROM-to-VDP DMA routines
-RAM_MdGlobal	ds.b sizeof_mdglbl-RAM_MdGlobal
-sizeof_mdram	ds.l 0
-	endif
-	
-	if MOMPASS=7
-		message "MD RAM ends at: \{((sizeof_mdram)&$FFFFFF)}"
-	endif
 		finish
 
 ; ====================================================================
@@ -179,7 +128,7 @@ sizeof_mdsys	ds.l 0
 
 	; 68k side
 		struct RAM_MdSound
-RAM_SoundTemp	ds.l 1
+RAM_SoundNull	ds.l 1
 sizeof_mdsnd	ds.l 0
 		finish
 		
@@ -206,4 +155,36 @@ RAM_VidPrntVram	ds.w 1
 RAM_VidPrntList	ds.w 3*64		; vdp addr (LONG), type (WORD)
 RAM_VdpRegs	ds.b 24
 sizeof_mdvid	ds.l 0
+		finish
+
+; ====================================================================
+; ----------------------------------------------------------------
+; MD RAM
+;
+; NOTE:
+; MCD Uses $FFFD00-$FFFDFF, stack starts at $FFFD00
+; ----------------------------------------------------------------
+
+		struct MDRAM_START
+	if MOMPASS=1					; First pass, empty sizes
+RAM_ModeBuff	ds.l 0
+RAM_MdSystem	ds.l 0
+RAM_MdSound	ds.l 0
+RAM_MdVideo	ds.l 0
+RAM_ExRamSub	ds.l 0
+RAM_MdGlobal	ds.l 0
+sizeof_mdram	ds.l 0
+	else
+RAM_ModeBuff	ds.b MAX_MDERAM				; Second pass, sizes are set
+RAM_MdSystem	ds.b sizeof_mdsys-RAM_MdSystem
+RAM_MdSound	ds.b sizeof_mdsnd-RAM_MdSound
+RAM_MdVideo	ds.b sizeof_mdvid-RAM_MdVideo
+RAM_ExRamSub	ds.w $300				; (CUSTOM SIZE) ROM-to-VDP DMA routines
+RAM_MdGlobal	ds.b sizeof_mdglbl-RAM_MdGlobal
+sizeof_mdram	ds.l 0
+	endif
+	
+	if MOMPASS=7
+		message "MD RAM ends at: \{((sizeof_mdram)&$FFFFFF)}"
+	endif
 		finish

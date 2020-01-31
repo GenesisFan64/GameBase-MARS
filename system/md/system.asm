@@ -79,25 +79,22 @@ System_Random:
 ;
 ; Uses:
 ; d4
+; 
+; Notes:
+; setting 0 or negative number will ignore changes
 ; --------------------------------------------------------
 
 System_SetInts:
 		move.l	d0,d4
 		beq.s	.novint
 		bmi.s	.novint
-		btst	#bitMars,(RAM_SysFlags).w
-		beq.s	.nomarsv
 		or.l	#$880000,d4
-.nomarsv:
  		move.l	d4,(RAM_VBlankGoTo+2).l
 .novint:
 		move.l	d1,d4
 		beq.s	.nohint
 		bmi.s	.nohint
-		btst	#bitMars,(RAM_SysFlags).w
-		beq.s	.nomarsh
 		or.l	#$880000,d4
-.nomarsh:
 		move.l	d4,(RAM_HBlankGoTo+2).l
 .nohint:
 		rts
@@ -357,24 +354,61 @@ VInt_Default:
 
 HInt_Default:
 		rte
-
-; ====================================================================
-; ----------------------------------------------------------------
-; MEGA CD ONLY
-; ----------------------------------------------------------------
-	
-	if MCD
-		include	"system/mcd/comm.asm"
-	endif
 	
 ; ====================================================================
 ; ----------------------------------------------------------------
 ; MARS ONLY
 ; ----------------------------------------------------------------
-	
-	if MARS
-		include	"system/mars/comm.asm"
-	endif
+		
+; --------------------------------------------------------
+; MdMars_SendData
+; 
+; Transfer data from 68k to SH2 using DREQ
+;
+; Input:
+; a0 - Input data
+; d0 | LONG - Output address (SH2 map)
+; d1 | WORD - Size
+;
+; Uses:
+; d4-d5,a4-a6
+; --------------------------------------------------------
+
+; NOTE: broken
+
+MdMars_SendData:
+		lea	(sysmars_reg),a6
+		move.w	#0,dreqctl(a6)
+		move.w	d1,d4
+		lsr.w	#1,d4
+		move.w	d4,dreqlen(a6)
+		move.w	#%100,dreqctl(a6)
+		move.l	d0,d4
+		move.w	d4,dreqdest+2(a6)
+		swap	d4
+		move.w	d4,dreqdest(a6)
+
+		move.w	2(a6),d4		; CMD Interrupt
+		bset	#0,d4
+		move.w	d4,2(a6)
+		movea.l	a0,a4
+		lea	dreqfifo(a6),a5
+		move.w	d1,d5
+		lsr.w	#3,d5
+		sub.w	#1,d5
+.sendfifo:
+		move.w	(a4)+,(a5)
+		move.w	(a4)+,(a5)
+		move.w	(a4)+,(a5)
+		move.w	(a4)+,(a5)
+.full:
+		move.w	dreqctl(a6),d4
+		btst	#7,d4
+		bne.s	.full
+		dbra	d5,.sendfifo
+		rts
+
+; --------------------------------------------------------
 		
 ; ====================================================================
 ; ----------------------------------------------------------------

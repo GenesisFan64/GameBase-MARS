@@ -1,164 +1,25 @@
 ; ====================================================================		
 ; ----------------------------------------------------------------
-; MARS SH2 CPU(s)
+; MARS SH2 CPU Code and RAM
 ; 
 ; DO NOT REMOVE THE FREE RUN TIMER ADJUSTMENTS
 ; ----------------------------------------------------------------
 
-		phase CS3
-		cpu SH7600
+		phase CS3			; now we are at SDRAM
+		cpu SH7600			; close enough
 
-; ====================================================================
-; ----------------------------------------------------------------
-; MARS SH2 constants
-; ----------------------------------------------------------------
+; =================================================================
+
+		include "system/mars/head.asm"
 
 ; ====================================================================		
 ; ----------------------------------------------------------------
-; MASTER SH2 CPU
+; MARS Interrupts for both CPUs
 ; ----------------------------------------------------------------
-
-		align 4
-SH2_Master:
-		dc.l SH2_M_Entry,CS3|$40000	; Cold PC,SP
-		dc.l SH2_M_Entry,CS3|$40000	; Manual PC,SP
-
-		dc.l SH2_Error			; Illegal instruction
-		dc.l 0				; reserved
-		dc.l SH2_Error			; Invalid slot instruction
-		dc.l $20100400			; reserved
-		dc.l $20100420			; reserved
-		dc.l SH2_Error			; CPU address error
-		dc.l SH2_Error			; DMA address error
-		dc.l SH2_Error			; NMI vector
-		dc.l SH2_Error			; User break vector
-
-		dc.l 0,0,0,0,0,0,0,0,0,0	; reserved
-		dc.l 0,0,0,0,0,0,0,0,0
-
-		dc.l SH2_Error,SH2_Error	; Trap vectors
-		dc.l SH2_Error,SH2_Error
-		dc.l SH2_Error,SH2_Error
-		dc.l SH2_Error,SH2_Error		
-		dc.l SH2_Error,SH2_Error
-		dc.l SH2_Error,SH2_Error
-		dc.l SH2_Error,SH2_Error
-		dc.l SH2_Error,SH2_Error
-		dc.l SH2_Error,SH2_Error		
-		dc.l SH2_Error,SH2_Error
-		dc.l SH2_Error,SH2_Error
-		dc.l SH2_Error,SH2_Error
-		dc.l SH2_Error,SH2_Error
-		dc.l SH2_Error,SH2_Error		
-		dc.l SH2_Error,SH2_Error
-		dc.l SH2_Error,SH2_Error
-
- 		dc.l master_irq			; Level 1 IRQ
-		dc.l master_irq			; Level 2 & 3 IRQ's
-		dc.l master_irq			; Level 4 & 5 IRQ's
-		dc.l master_irq			; PWM interupt
-		dc.l master_irq			; Command interupt
-		dc.l master_irq			; H Blank interupt
-		dc.l master_irq			; V Blank interupt
-		dc.l master_irq			; Reset Button
-
-; ====================================================================
-; ----------------------------------------------------------------
-; SLAVE SH2 CPU
-; ----------------------------------------------------------------
-
-		align 4
-SH2_Slave:
-		dc.l SH2_S_Entry,CS3|$3F000	; Cold PC,SP
-		dc.l SH2_S_Entry,CS3|$3F000	; Manual PC,SP
-
-		dc.l SH2_Error			; Illegal instruction
-		dc.l 0				; reserved
-		dc.l SH2_Error			; Invalid slot instruction
-		dc.l $20100400			; reserved
-		dc.l $20100420			; reserved
-		dc.l SH2_Error			; CPU address error
-		dc.l SH2_Error			; DMA address error
-		dc.l SH2_Error			; NMI vector
-		dc.l SH2_Error			; User break vector
-
-		dc.l 0,0,0,0,0,0,0,0,0,0	; reserved
-		dc.l 0,0,0,0,0,0,0,0,0
-
-		dc.l SH2_Error,SH2_Error	; Trap vectors
-		dc.l SH2_Error,SH2_Error
-		dc.l SH2_Error,SH2_Error
-		dc.l SH2_Error,SH2_Error		
-		dc.l SH2_Error,SH2_Error
-		dc.l SH2_Error,SH2_Error
-		dc.l SH2_Error,SH2_Error
-		dc.l SH2_Error,SH2_Error
-		dc.l SH2_Error,SH2_Error		
-		dc.l SH2_Error,SH2_Error
-		dc.l SH2_Error,SH2_Error
-		dc.l SH2_Error,SH2_Error
-		dc.l SH2_Error,SH2_Error
-		dc.l SH2_Error,SH2_Error		
-		dc.l SH2_Error,SH2_Error
-		dc.l SH2_Error,SH2_Error
-
- 		dc.l slave_irq			; Level 1 IRQ
-		dc.l slave_irq			; Level 2 & 3 IRQ's
-		dc.l slave_irq			; Level 4 & 5 IRQ's
-		dc.l slave_irq			; PWM interupt
-		dc.l slave_irq			; Command interupt
-		dc.l slave_irq			; H Blank interupt
-		dc.l slave_irq			; V Blank interupt
-		dc.l slave_irq			; Reset Button
-
-; ====================================================================
-; ----------------------------------------------------------------
-; irq
-; 
-; r0-r1 are safe
-; ----------------------------------------------------------------
-
-		align 4
-master_irq:
-		mov.l	r0,@-r15
-		mov.l	r1,@-r15
-		sts.l	pr,@-r15
-	
-		stc	sr,r0
-		shlr2	r0
-		and	#$3C,r0
-		mov	#int_m_list,r1
-		add	r1,r0
-		mov	@r0,r1
-		jsr	@r1
-		nop
-		
-		lds.l	@r15+,pr
-		mov.l	@r15+,r1
-		mov.l	@r15+,r0
-		rte
-		nop
-		align 4
-		ltorg
-
-; ------------------------------------------------
-; irq list
-; ------------------------------------------------
-
-		align 4
-int_m_list:
-		dc.l m_irq_bad,m_irq_bad
-		dc.l m_irq_bad,m_irq_bad
-		dc.l m_irq_bad,m_irq_bad
-		dc.l m_irq_pwm,m_irq_pwm
-		dc.l m_irq_cmd,m_irq_cmd
-		dc.l m_irq_h,m_irq_h
-		dc.l m_irq_v,m_irq_v
-		dc.l m_irq_vres,m_irq_vres
 
 ; =================================================================
 ; ------------------------------------------------
-; Unused
+; Unused interrupt
 ; ------------------------------------------------
 
 m_irq_bad:
@@ -179,18 +40,10 @@ m_irq_pwm:
 		mov.b	r0,@(_TOCR,r1)		; as required
 		mov.w	@(pwmintclr,gbr),r0	; interrupt clear
 		mov.b	@(_TOCR,r1),r0		; as required
-	
-; 		mov	#$F0,r0
-; 		ldc	r0,sr
-; 		mov.l	#_FRT,r1
-; 		mov.b	@(_TOCR,r1),r0
-; 		xor	#$02,r0
-; 		mov.b	r0,@(_TOCR,r1)
-; 		mov.w	r0,@(pwmintclr,gbr)
-; 		nop
-; 		nop
-; 		nop
-; 		nop
+		nop
+		nop
+		nop
+		nop
 		
 ; ----------------------------------
 
@@ -236,18 +89,10 @@ m_irq_cmd:
 		mov.b	r0,@(_TOCR,r1)		; as required
 		mov.w	@(cmdintclr,gbr),r0	; interrupt clear
 		mov.b	@(_TOCR,r1),r0		; as required
-		
-; 		mov	#$F0,r0
-; 		ldc	r0,sr
-; 		mov.l	#_FRT,r1
-; 		mov.b	@(_TOCR,r1),r0
-; 		xor	#$02,r0
-; 		mov.b	r0,@(_TOCR,r1)
-; 		mov.w	r0,@(cmdintclr,gbr)
-; 		nop
-; 		nop
-; 		nop
-; 		nop
+		nop
+		nop
+		nop
+		nop
 		
 ; ----------------------------------
 
@@ -311,18 +156,10 @@ m_irq_h:
 		mov.b	r0,@(_TOCR,r1)		; as required
 		mov.w	@(hintclr,gbr),r0	; interrupt clear
 		mov.b	@(_TOCR,r1),r0		; as required
-		
-; 		mov	#$F0,r0
-; 		ldc	r0,sr
-; 		mov.l	#_FRT,r1
-; 		mov.b	@(_TOCR,r1),r0
-; 		xor	#$02,r0
-; 		mov.b	r0,@(_TOCR,r1)
-; 		mov.w	r0,@(hintclr,gbr)
-; 		nop
-; 		nop
-; 		nop
-; 		nop
+		nop
+		nop
+		nop
+		nop
 		
 ; ----------------------------------
 
@@ -337,7 +174,7 @@ m_irq_h:
 ; ------------------------------------------------
 
 m_irq_v:
-		mov	#$F0,r0
+		mov	#$F0,r0			; TODO: checar si no neceito esto
 		ldc	r0,sr
 		mov	#$02,r0			; toggle FRT bit for future IRQs
 		mov.w	r0,@(vintclr,gbr)	; interrupt clear
@@ -345,18 +182,10 @@ m_irq_v:
 		mov.b	r0,@(_TOCR,r1)		; as required
 		mov.w	@(vintclr,gbr),r0	; interrupt clear
 		mov.b	@(_TOCR,r1),r0		; as required
-
-; 		mov	#$F0,r0
-; 		ldc	r0,sr
-; 		mov.l	#_FRT,r1
-; 		mov.b	@(_TOCR,r1),r0
-; 		xor	#$02,r0
-; 		mov.b	r0,@(_TOCR,r1)
-; 		mov.w	r0,@(vintclr,gbr)
-; 		nop
-; 		nop
-; 		nop
-; 		nop
+		nop
+		nop
+		nop
+		nop
 		
 ; ----------------------------------
 
@@ -452,23 +281,6 @@ m_irq_vres:
 		cmp/eq	r0,r1
 		bf	.sh_wait
 
-; 		mov	#$220003D4,r1		; TODO: creo que ya no necesito esto
-; 		mov	@r1,r2
-; 		mov	@(4,r1),r3
-; 		mov	@(8,r1),r4
-; 		mov	#$22000000,r1
-; 		add	r1,r2
-; 		mov	#$26000000,r1
-; 		add	r1,r3
-; 		shlr2	r4
-; 		add	#-1,r4
-; .recopy_rom:
-; 		mov.l	@r2+,r0
-; 		mov.l	r0,@r3
-; 		add	#4,r3
-; 		dt	r4
-; 		bf	.recopy_rom
-
 		mov	#"M_OK",r0		; let the others know master ready
 		mov	r0,@(comm0,gbr)
 		mov	#CS3|$40000-8,r15
@@ -497,49 +309,6 @@ m_irq_vres:
 		align 4
 		ltorg
 
-; ====================================================================
-; ----------------------------------------------------------------
-; irq
-; 
-; r0-r1 are safe
-; ----------------------------------------------------------------
-
-		align 4
-slave_irq:
-		mov.l	r0,@-r15
-		mov.l	r1,@-r15
-		sts.l	pr,@-r15
-	
-		stc	sr,r0
-		shlr2	r0
-		and	#$3C,r0
-		mov	#int_s_list,r1
-		add	r1,r0
-		mov	@r0,r1
-		jsr	@r1
-		nop
-		
-		lds.l	@r15+,pr
-		mov.l	@r15+,r1
-		mov.l	@r15+,r0
-		rte
-		nop
-		
-; ------------------------------------------------
-; irq list
-; ------------------------------------------------
-
-		align 4
-int_s_list:
-		dc.l s_irq_bad,s_irq_bad
-		dc.l s_irq_bad,s_irq_bad
-		dc.l s_irq_bad,s_irq_bad
-		dc.l s_irq_pwm,s_irq_pwm
-		dc.l s_irq_cmd,s_irq_cmd
-		dc.l s_irq_h,s_irq_h
-		dc.l s_irq_v,s_irq_v
-		dc.l s_irq_vres,s_irq_vres
-
 ; =================================================================
 ; ------------------------------------------------
 ; Unused
@@ -563,18 +332,10 @@ s_irq_pwm:
 		mov.b	r0,@(_TOCR,r1)		; as required
 		mov.w	@(pwmintclr,gbr),r0	; interrupt clear
 		mov.b	@(_TOCR,r1),r0		; as required
-		
-; 		mov	#$F0,r0
-; 		ldc	r0,sr
-; 		mov.l	#_FRT,r1
-; 		mov.b	@(_TOCR,r1),r0
-; 		xor	#$02,r0
-; 		mov.b	r0,@(_TOCR,r1)
-; 		mov.w	r0,@(pwmintclr,gbr)
-; 		nop
-; 		nop
-; 		nop
-; 		nop
+		nop
+		nop
+		nop
+		nop
 		
 ; ----------------------------------
 
@@ -595,18 +356,10 @@ s_irq_cmd:
 		mov.b	r0,@(_TOCR,r1)		; as required
 		mov.w	@(cmdintclr,gbr),r0	; interrupt clear
 		mov.b	@(_TOCR,r1),r0		; as required
-		
-; 		mov	#$F0,r0
-; 		ldc	r0,sr
-; 		mov.l	#_FRT,r1
-; 		mov.b	@(_TOCR,r1),r0
-; 		xor	#$02,r0
-; 		mov.b	r0,@(_TOCR,r1)
-; 		mov.w	r0,@(cmdintclr,gbr)
-; 		nop
-; 		nop
-; 		nop
-; 		nop
+		nop
+		nop
+		nop
+		nop
 		
 ; ----------------------------------
 
@@ -628,18 +381,10 @@ s_irq_h:
 		mov.b	r0,@(_TOCR,r1)		; as required
 		mov.w	@(hintclr,gbr),r0	; interrupt clear
 		mov.b	@(_TOCR,r1),r0		; as required
-		
-; 		mov	#$F0,r0
-; 		ldc	r0,sr
-; 		mov.l	#_FRT,r1
-; 		mov.b	@(_TOCR,r1),r0
-; 		xor	#$02,r0
-; 		mov.b	r0,@(_TOCR,r1)
-; 		mov.w	r0,@(hintclr,gbr)
-; 		nop
-; 		nop
-; 		nop
-; 		nop
+		nop
+		nop
+		nop
+		nop
 		
 ; ----------------------------------
 
@@ -660,18 +405,10 @@ s_irq_v:
 		mov.b	r0,@(_TOCR,r1)		; as required
 		mov.w	@(vintclr,gbr),r0	; interrupt clear
 		mov.b	@(_TOCR,r1),r0		; as required
-		
-; 		mov	#$F0,r0
-; 		ldc	r0,sr
-; 		mov.l	#_FRT,r1
-; 		mov.b	@(_TOCR,r1),r0
-; 		xor	#$02,r0
-; 		mov.b	r0,@(_TOCR,r1)
-; 		mov.w	r0,@(vintclr,gbr)
-; 		nop
-; 		nop
-; 		nop
-; 		nop
+		nop
+		nop
+		nop
+		nop
 
 ; ----------------------------------
 		
@@ -763,7 +500,7 @@ SH2_M_Entry:
 		ldc	r14,gbr
 		mov.w	r0,@(vintclr,gbr)
 		mov.w	r0,@(vintclr,gbr)
-		mov.w	r0,@(hintclr,gbr)	;clear IRQ ACK regs
+		mov.w	r0,@(hintclr,gbr)	; clear IRQ ACK regs
 		mov.w	r0,@(hintclr,gbr)
 		mov.w	r0,@(cmdintclr,gbr)
 		mov.w	r0,@(cmdintclr,gbr)
@@ -794,9 +531,9 @@ SH2_M_Entry:
 		mov	#$e2,r0
 		mov.b	r0,@(_TOCR,r1)		;
 		
-; ---------------------------------------------
-; Wait for MD and Slave SH2
-; ---------------------------------------------
+; ------------------------------------------------
+; Wait for Genesis and Slave CPU
+; ------------------------------------------------
 
 .wait_md:
 		mov.l	@(comm0,gbr),r0
@@ -811,7 +548,7 @@ SH2_M_Entry:
 		mov.l	r0,@(comm8,gbr)
 
 ; ********************************************************
-; Your MASTER code starts here
+; Your MASTER CPU code starts here
 ; ********************************************************
 
 SH2_M_HotStart:
@@ -889,9 +626,9 @@ SH2_S_Entry:
 		mov.b	r0,@(_FRC_L,r1)		;
 		mov.b	r0,@(_FRC_H,r1)		;
     		
-; --------------------------------------------------------
-; Wait for MD, report to Master SH2
-; --------------------------------------------------------
+; ------------------------------------------------
+; Wait for Genesis, report to Master SH2
+; ------------------------------------------------
 
 .wait_md:
 		mov.l	@(comm0,gbr),r0
@@ -961,14 +698,14 @@ sin_table	binclude "system/mars/data/sinedata.bin"	; sinetable for 3D stuff
 SH2_RAM:
 		struct SH2_RAM|TH
 	if MOMPASS=1
-MARSRAM_System	ds.l 0
-MARSRAM_Video	ds.l 0
-MARSRAM_Sound	ds.l 0
+MarsRam_System	ds.l 0
+MarsRam_Video	ds.l 0
+MarsRam_Sound	ds.l 0
 sizeof_marsram	ds.l 0
 	else
-MARSRAM_System	ds.b (sizeof_marssys-MARSRAM_System)
-MARSRAM_Video	ds.b (sizeof_marsvid-MARSRAM_Video)
-MARSRAM_Sound	ds.b (sizeof_marssnd-MARSRAM_Sound)
+MarsRam_System	ds.b (sizeof_marssys-MarsRam_System)
+MarsRam_Video	ds.b (sizeof_marsvid-MarsRam_Video)
+MarsRam_Sound	ds.b (sizeof_marssnd-MarsRam_Sound)
 sizeof_marsram	ds.l 0
 	endif
 
@@ -983,7 +720,7 @@ sizeof_marsram	ds.l 0
 ; MARS System RAM
 ; ----------------------------------------------------------------
 
-		struct MARSRAM_System
+		struct MarsRam_System
 MarsSys_Input	ds.l 4
 MARSSys_MdReq	ds.l 1
 sizeof_marssys	ds.l 0
@@ -994,7 +731,7 @@ sizeof_marssys	ds.l 0
 ; MARS Sound RAM
 ; ----------------------------------------------------------------
 
-		struct MARSRAM_Sound
+		struct MarsRam_Sound
 MARSSnd_Pwm	ds.b sizeof_sndchn*8
 sizeof_marssnd	ds.l 0
 		finish
@@ -1004,14 +741,13 @@ sizeof_marssnd	ds.l 0
 ; MARS Video RAM
 ; ----------------------------------------------------------------
 
-		struct MARSRAM_Video
+		struct MarsRam_Video
 MARSVid_LastFb	ds.l 1
 MarsVid_VIntBit	ds.l 1
 MARSMdl_FaceCnt	ds.l 1
 MarsMdl_CurrPly	ds.l 2
 MarsMdl_CurrZtp	ds.l 1
 MarsMdl_CurrZds	ds.l 1
-; MARSMdl_OutPnts ds.l 3*MAX_VERTICES			; Output vertices for reading
 MarsPly_ZList	ds.l 2*MAX_POLYGONS			; Polygon address | Polygon Z pos
 MARSVid_Palette	ds.w 256
 MARSMdl_Playfld	ds.b sizeof_plyfld			; Playfield buffer (or camera)
