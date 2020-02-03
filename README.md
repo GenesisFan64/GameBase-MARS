@@ -11,7 +11,7 @@ Please note that current 32X emulators ignore critical parts of the system, thes
 (and more stuff I forgot to mention)
 
 More notes:
-- PWM interrupt: If you set a high Hz value (ex. 320000) and do heavy tasks (like rendering a 3D model) it will cause serious slowdown, Emulators ignore this
+- PWM interrupt: If you set a high Hz value (ex. 32000) and do heavy tasks (like rendering a 3D model) it will cause serious slowdown, Emulators ignore this
 
 So if possible, please test any changes on real hardware.
 

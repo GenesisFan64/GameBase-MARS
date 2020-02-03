@@ -67,13 +67,13 @@ mdl_z_rot	ds.l 1
 sizeof_mdl	ds.l 0
 		finish
 
-; polygon struct
+; polygon structure
 		struct 0
-polygn_type	ds.l 1			; Type ( Polygon(3), Quad(4) or EndOfList(0) )
-polygn_mtrl	ds.l 1			; Material Type: Color (0-$FF) or Texture data address
-polygn_mtrlopt	ds.l 1			; Material Setting: add $xx to solid color / texture width
-polygn_points	ds.l 4			; X/Y points 16-bit
-polygn_srcpnts	ds.l 4			; X/Y points 16-bit
+polygn_type	ds.l 1			; Type: Polygon(3) or Quad(4), other values are ignored
+polygn_mtrl	ds.l 1			; Material Type: Color (0-255) or Texture data address
+polygn_mtrlopt	ds.l 1			; Material Option: add $xx to solid color / texture width
+polygn_points	ds.l 4			; X/Y destination points (16-bit)
+polygn_srcpnts	ds.l 4			; X/Y texture material points (16-bit), ignored on solid color
 sizeof_polygn	ds.l 0
 		finish
 		
@@ -124,9 +124,9 @@ MarsVideo_Init:
 		bf	.this_fb
 		
  		mov	#_framebuffer,r1
-		mov	#$100,r0
-		mov	#240,r2
-		mov	#$100,r3
+		mov	#$200/2,r0	; BASE width for each line to 512 pixels (so VDP LineFill works properly)
+		mov	#240,r2		; Vertical lines to set
+		mov	r0,r3		; Increment value (copy from r0)
 .loop:
 		mov.w	r0,@r1
 		add	#2,r1
@@ -144,41 +144,21 @@ MarsVideo_Init:
 
 ; ====================================================================
 ; ----------------------------------------------------------------
-; Video render (polygons)
-; ----------------------------------------------------------------
-
-; MarsVideo_Render:
-; 		sts	pr,@-r15
-; 		mov 	#MarsPly_ZList,r2
-; .next:
-; 		mov	@r2,r0
-; 		cmp/eq	#0,r0
-; 		bt	.finish
-; 		bsr	MarsVideo_DrwPoly
-; 		mov	r0,r1
-; .off:
-; 		bra	.next
-; 		add 	#8,r2
-; .finish:
-; 		lds	@r15+,pr
-; 		rts
-; 		nop
-; 		align 4
-; 		ltorg
-
-; ====================================================================
-; ----------------------------------------------------------------
 ; Video subroutines
 ; ----------------------------------------------------------------
 
 ; --------------------------------------------------------
-; MarsVideo_DrwPoly
+; MarsVideo_DrawPolygon
 ; 
-; r1 - polygon points
-; r2 - free
+; Input:
+; r1 - polygon data
+;      (see "polygon structure" for details)
+; 
+; Uses:
+; r3-r14
 ; --------------------------------------------------------
 
-MarsVideo_DrwPoly:
+MarsVideo_DrawPolygon:
 		sts	pr,@-r15
 
 		mov 	#$7FFFFFFF,r11		; lowest Y
@@ -552,7 +532,7 @@ drwpoly_texture:
 
 		mov	@(polygn_mtrl,r1),r10		; texture data
 		mov	@(polygn_mtrlopt,r1),r2		; texture width
-		mov 	r11,r0
+		mov 	r11,r0				; Y position
 		shll8	r0
 		shll	r0
 		mov 	#_overwrite+$200,r11
@@ -561,7 +541,6 @@ drwpoly_texture:
 		sub 	r7,r8
 		cmp/pl	r8
 		bf	.texexit
-
 .texloop:
 		swap.w	r5,r1				; Build row offset
 		mulu.w	r1,r2
@@ -576,7 +555,6 @@ drwpoly_texture:
 		add	r6,r5				; Update Y
 		dt	r8
 		bf	.texloop
-		
 .texexit:
 		mov 	@r15+,r11
 		mov 	@r15+,r10
@@ -696,7 +674,6 @@ dda_left:
 		bf	.waitdy
 		mov	@r7,r3
 		mov	r3,@(plydda_src_dy,r14)
-
 .exit:
 		rts
 		nop
@@ -813,6 +790,8 @@ dda_right:
 
 ; ------------------------------------
 ; MarsVideo_ClearFrame
+; 
+; Clear the current framebuffer
 ; ------------------------------------
 
 MarsVideo_ClearFrame:
@@ -849,7 +828,7 @@ MarsVideo_ClearFrame:
 ; ------------------------------------
 ; MarsVideo_SwapFrame
 ; 
-; Swap frame
+; Swap frame, copy new bit to RAM
 ; ------------------------------------
 
 MarsVideo_SwapFrame:
@@ -861,12 +840,12 @@ MarsVideo_SwapFrame:
 		rts
 		mov.b	r0,@r2
 		align 4
-; 		ltorg
 		
 ; ------------------------------------
 ; MarsVideo_WaitFrame
 ; 
-; Wait if frame is ready
+; Wait if new frame is the same
+; as the one set on RAM
 ; ------------------------------------
 
 MarsVideo_WaitFrame:
@@ -884,7 +863,8 @@ MarsVideo_WaitFrame:
 ; ------------------------------------
 ; MarsVdp_LoadPal
 ; 
-; Load palette to MARS VDP
+; Load palette to RAM, the
+; Palette will be transfered on VBlank
 ;
 ; Input:
 ; r1 - Data
@@ -931,10 +911,6 @@ MarsMdl_Init:
 		add 	#4,r1
 		dt	r2
 		bf	.clrbuff
-
-; 		mov 	#MarsMdl_Objects,r1
-; 		mov 	#TEST_MODEL,r0
-; 		mov 	r0,@(mdl_data,r1)
 		rts
 		nop
 		align 4
@@ -971,7 +947,7 @@ MarsMdl_Run:
 .exitmdl:
 
 ; ------------------------------------------------
-; Z Sort faces
+; Z Sort ALL polygon faces
 ; 
 ; Painters algorithm
 ; ------------------------------------------------
@@ -1028,7 +1004,8 @@ MarsMdl_Run:
 ; ------------------------------------------------
 ; Read current model
 ; 
-; r14 - model buffer
+; Input:
+; r1 - model data
 ; ------------------------------------------------
 
 make_model:
@@ -1227,6 +1204,13 @@ make_model:
 ; ------------------------------------------------
 ; Muliply X and Y for perspective
 ; persp*256/Z
+; 
+; Input:
+; r2 - X.00
+; r3 - Y.00
+; r4 - Z.00
+; 
+; Output:
 ; r2 - X >> 8
 ; r3 - Y >> 8
 ; r4 - Z current
@@ -1486,47 +1470,16 @@ mdlread_dopersp:
 		align 4
 		ltorg
 
-	; OLD X/Y perspective
-; 		mov	#160*256,r7
-; 		mov	r4,r0
-; 		exts	r0,r0
-; 		cmp/eq	#0,r0
-; 		bf	.dontdiv
-; .dontdiv:
-; 		mov 	#_JR,r5
-; 		mov 	r0,@r5
-; 		nop
-; 		mov 	r7,@(4,r5)
-; 		nop
-; 		mov	#8,r5
-; .waitdx:
-; 		dt	r5
-; 		bf	.waitdx
-; 		mov	#_HRL,r5
-; 		mov 	@r5,r5
-; .nomulti:
-; 		dmulu	r5,r3
-; 		sts	macl,r3		; new Y
-; 		mov	r4,r0
-; 		shlr	r0
-; 		exts	r0,r0
-; 		cmp/pz	r0
-; 		bf	.dontfix
-; 		neg 	r3,r3
-; .dontfix:
-; 		dmulu	r5,r2
-; 		sts	macl,r2		; new X
-; 		cmp/pz	r0
-; 		bf	.dontfix2
-; 		neg	r2,r2
-; .dontfix2:
-
 ; ------------------------------------------------
+; Input:
 ; r0 - tan
-; r7 - sine
-; r8 - cosine
+; 
+; Output:
+; r7 - sin
+; r8 - cos
+; ------------------------------------------------
+
 mdlrd_readsine:
-; 		sts	pr,@-r15
 		shll2	r0
 		mov	#$1FFF,r7
 		and	r7,r0
@@ -1534,7 +1487,6 @@ mdlrd_readsine:
 		mov	#sin_table+$800,r8
 		mov	@(r0,r7),r7
 		mov	@(r0,r8),r8
-; 		lds	@r15+,pr
 		rts
 		nop
 		align 4

@@ -1,12 +1,13 @@
 ; ====================================================================		
 ; ----------------------------------------------------------------
-; MARS SH2 CPU Code and RAM
+; MARS SH2 Section, CODE for both CPUs, RAM usage and
+; DATA goes here
 ; 
-; DO NOT REMOVE THE FREE RUN TIMER ADJUSTMENTS
+; *** DO NOT REMOVE THE FREE-RUN TIMER ADJUSTMENTS ***
 ; ----------------------------------------------------------------
 
 		phase CS3			; now we are at SDRAM
-		cpu SH7600			; close enough
+		cpu SH7600			; should be SH7095 but ASL doesn't have it, this is close enough
 
 ; =================================================================
 
@@ -188,7 +189,9 @@ m_irq_v:
 		nop
 		
 ; ----------------------------------
-
+; Palette can be updated only in
+; VBlank
+; ----------------------------------
 		mov 	#_vdpreg,r1
 .min_r		mov.w	@(10,r1),r0		; Wait for FEN to clear
 		and	#%10,r0
@@ -219,7 +222,7 @@ m_irq_v:
 		mov	r4,@($C,r5)		; load mode
 		add	#1,r0
 		mov	r0,@r6			; Start OPERATION
-; 
+
 ; 	; Grab inputs from MD (using COMM12 and COMM14)
 ; 	; using MD's VBlank
 ; 		mov	#$FFFF,r2
@@ -250,9 +253,6 @@ m_irq_v:
 		mov 	#0,r0
 		mov	#MarsVid_VIntBit,r1
 		mov 	r0,@r1
-		mov.w	@(comm8,gbr),r0
-		add 	#1,r0
-		mov.w	r0,@(comm8,gbr)
 		rts
 		nop
 		align 4
@@ -552,8 +552,8 @@ SH2_M_Entry:
 ; ********************************************************
 
 SH2_M_HotStart:
-		mov	#CS3|$40000,r15
-		mov	#_sysreg,r14
+		mov	#CS3|$40000,r15			; Reset stack
+		mov	#_sysreg,r14			; Reset gbr
 		ldc	r14,gbr
 	
 		mov	#$F0,r0				; Interrupts OFF
@@ -570,7 +570,7 @@ SH2_M_HotStart:
 		nop
 		bsr	MarsSound_Init			; Init sound
 		nop
-; 		mov 	#CACHE_DATA,r1		
+; 		mov 	#CACHE_DATA,r1			; In case you need to store code on CACHE (huge speedup but small)		
 ; 		mov 	#$C0000000,r2
 ; 		mov 	#(CACHE_END-CACHE_START)/4,r3
 ; .copy:
@@ -579,10 +579,12 @@ SH2_M_HotStart:
 ; 		add 	#4,r2
 ; 		dt	r3
 ; 		bf	.copy
-
-		mov	#0,r0
-		mov.w	r0,@(comm8,gbr)
 		
+		mov	#Palette_Puyo,r1
+		mov	#256,r3
+		bsr	MarsVideo_LoadPal
+		mov	#0,r2
+
 ; ------------------------------------------------
 
 		mov	#$20,r0			; Interrupts ON
@@ -593,9 +595,18 @@ SH2_M_HotStart:
 ; --------------------------------------------------------
 
 master_loop:
-		mov.w	@(comm0,gbr),r0
-		add 	#1,r0
-		mov.w	r0,@(comm0,gbr)
+		bsr	MarsVideo_SwapFrame
+		nop
+		bsr	MarsVideo_WaitFrame
+		nop
+		
+		mov	#Polygn_Puyo,r1
+		bsr	MarsVideo_DrawPolygon
+		nop
+		mov	#Polygn_Solid,r1
+		bsr	MarsVideo_DrawPolygon
+		nop
+		
 		bra	master_loop
 		nop
 		align 4
@@ -642,9 +653,9 @@ SH2_S_Entry:
 ; ********************************************************
 
 SH2_S_HotStart:
-		mov.l	#CS3|$3F000,r15
-		mov.l	#_sysreg,r14
-		ldc	r14,gbr			; GBR = addr of sys regs
+		mov.l	#CS3|$3F000,r15		; Reset stack
+		mov.l	#_sysreg,r14		; Reset gbr
+		ldc	r14,gbr
 		mov	#$F0,r0			; Interrupts OFF
 		ldc	r0,sr
 		mov	#_CCR,r1		; Set this cache mode
@@ -671,10 +682,8 @@ SH2_S_HotStart:
 ; --------------------------------------------------------
 
 slave_loop:
-		mov.w	@(comm2,gbr),r0
-		add 	#1,r0
-		mov.w	r0,@(comm2,gbr)
-		
+		nop
+		nop
 		bra	slave_loop
 		nop
 		align 4
